@@ -175,10 +175,11 @@ Print ev_4'''.
 
 Theorem ev_8 : ev 8.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  apply ev_SS. apply ev_SS. apply ev_4.
+Qed.
 
-Definition ev_8' : ev 8
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition ev_8' : ev 8 :=
+  ev_SS 6 (ev_SS 4 ev_4).
 (** [] *)
 
 (* ################################################################# *)
@@ -395,8 +396,11 @@ Definition and_comm' P Q : P /\ Q <-> Q /\ P :=
 
     Construct a proof object for the following proposition. *)
 
-Definition conj_fact : forall P Q R, P /\ Q -> Q /\ R -> P /\ R
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition conj_fact : forall P Q R, P /\ Q -> Q /\ R -> P /\ R := 
+  fun _ _ _ p1 p2 => 
+    match p1, p2 with
+    | conj HP HQ , conj _ HR => conj HP HR
+    end.
 (** [] *)
 
 (* ================================================================= *)
@@ -452,8 +456,11 @@ End Or.
 
     Construct a proof object for the following proposition. *)
 
-Definition or_commut' : forall P Q, P \/ Q -> Q \/ P
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition or_commut' : forall P Q, P \/ Q -> Q \/ P :=
+  fun _ _ p => match p with
+    | or_introl HP => or_intror HP
+    | or_intror HQ => or_introl HQ
+    end.
 (** [] *)
 
 (* ================================================================= *)
@@ -498,8 +505,8 @@ Definition some_nat_is_even : exists n, ev n :=
 
     Construct a proof object for the following proposition. *)
 
-Definition ex_ev_Sn : ex (fun n => ev (S n))
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition ex_ev_Sn : ex (fun n => ev (S n)) :=
+  ex_intro _ 1 (ev_SS 0 ev_0).
 (** [] *)
 
 (* ================================================================= *)
@@ -517,8 +524,7 @@ Inductive True : Prop :=
 
     Construct a proof object for the following proposition. *)
 
-Definition p_implies_true : forall P, P -> True
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition p_implies_true : forall P, P -> True := fun _ _ => I.
 (** [] *)
 
 (** [False] is equally simple -- indeed, so simple it may look
@@ -552,8 +558,8 @@ Definition false_implies_zero_eq_one : False -> 0 = 1 :=
 
     Construct a proof object for the following proposition. *)
 
-Definition ex_falso_quodlibet' : forall P, False -> P
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition ex_falso_quodlibet' : forall P, False -> P :=
+  fun _ contra => match contra with end.
 (** [] *)
 
 End Props.
@@ -652,7 +658,10 @@ Qed.
 
 Definition eq_cons : forall (X : Type) (h1 h2 : X) (t1 t2 : list X),
     h1 == h2 -> t1 == t2 -> h1 :: t1 == h2 :: t2
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+  := fun _ _ _ _ _ Eh Et =>
+    match Eh, Et with
+    | eq_refl h, eq_refl t => eq_refl (h :: t)
+    end.
 
 (** [] *)
 
@@ -666,7 +675,8 @@ Definition eq_cons : forall (X : Type) (h1 h2 : X) (t1 t2 : list X),
 Lemma equality__leibniz_equality : forall (X : Type) (x y: X),
   x == y -> forall (P : X -> Prop), P x -> P y.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. destruct H. apply H0.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard (equality__leibniz_equality_term)
@@ -676,8 +686,11 @@ Proof.
     proof term constructed by tactics in the previous exercise is
     needessly complicated. Hint: pattern-match as soon as possible. *)
 Definition equality__leibniz_equality_term : forall (X : Type) (x y: X),
-    x == y -> forall P : (X -> Prop), P x -> P y
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+    x == y -> forall P : (X -> Prop), P x -> P y :=
+    fun _ _ _ E => 
+      match E with
+      | eq_refl _ => fun _ Hp => Hp
+      end.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard, optional (leibniz_equality__equality)
@@ -690,7 +703,10 @@ Definition equality__leibniz_equality_term : forall (X : Type) (x y: X),
 Lemma leibniz_equality__equality : forall (X : Type) (x y: X),
   (forall P:X->Prop, P x -> P y) -> x == y.
 Proof.
-(* FILL IN HERE *) Admitted.
+  intros. destruct (H (eq x)).
+  - apply eq_refl.
+  - apply eq_refl.
+Qed.
 (** [] *)
 
 End EqualityPlayground.
@@ -825,38 +841,76 @@ Fail Definition falso : False := infinite_loop 0.
 
 (** **** Exercise: 2 stars, standard (and_assoc) *)
 Definition and_assoc : forall P Q R : Prop,
-    P /\ (Q /\ R) -> (P /\ Q) /\ R
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+    P /\ (Q /\ R) -> (P /\ Q) /\ R :=
+    fun _ _ _ H => 
+      match H with
+      | conj HP v =>
+          match v with
+          | conj HQ HR => conj (conj HP HQ) HR
+          end
+      end.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard (or_distributes_over_and) *)
 Definition or_distributes_over_and : forall P Q R : Prop,
-    P \/ (Q /\ R) <-> (P \/ Q) /\ (P \/ R)
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+    P \/ (Q /\ R) <-> (P \/ Q) /\ (P \/ R) :=
+    fun _ _ _ =>
+      conj
+        (fun H => 
+          match H with
+          | or_introl HP => conj (or_introl HP) (or_introl HP)
+          | or_intror c =>
+              match c with
+              | conj HQ HR => conj (or_intror HQ) (or_intror HR)
+              end
+          end)
+        (fun H => 
+          match H with
+          | conj c1 c2 =>
+              match c1 with
+              | or_introl HP => or_introl HP
+              | or_intror HQ =>
+                  match c2 with
+                  | or_introl HP => or_introl HP
+                  | or_intror HR => or_intror (conj HQ HR)
+                  end
+              end
+          end).
 (** [] *)
 
 (** **** Exercise: 3 stars, standard (negations) *)
 Definition double_neg : forall P : Prop,
-    P -> ~~P
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+    P -> ~~P :=
+    fun P HP => fun (f : P -> False) => f HP.
 
 Definition contradiction_implies_anything : forall P Q : Prop,
-    (P /\ ~P) -> Q
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+    (P /\ ~P) -> Q :=
+    fun _ _ H =>
+      match H with
+      | conj HP HNP => match HNP HP with end
+      end.
 
 Definition de_morgan_not_or : forall P Q : Prop,
-    ~ (P \/ Q) -> ~P /\ ~Q
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+    ~ (P \/ Q) -> ~P /\ ~Q :=
+    fun _ _ H => 
+      conj
+        (fun HP => H (or_introl HP))
+        (fun HQ => H (or_intror HQ)).
 (** [] *)
 
 (** **** Exercise: 2 stars, standard (currying) *)
 Definition curry : forall P Q R : Prop,
-    ((P /\ Q) -> R) -> (P -> (Q -> R))
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+    ((P /\ Q) -> R) -> (P -> (Q -> R)) :=
+  fun _ _ _ H =>
+    fun HP HQ => H (conj HP HQ).
 
 Definition uncurry : forall P Q R : Prop,
-    (P -> (Q -> R)) -> ((P /\ Q) -> R)
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+    (P -> (Q -> R)) -> ((P /\ Q) -> R) :=
+  fun _ _ _ H => 
+    fun c =>
+      match c with
+      | conj HP HQ => H HP HQ
+      end.
 (** [] *)
 
 (* ################################################################# *)
@@ -884,7 +938,11 @@ Theorem pe_implies_or_eq :
   propositional_extensionality ->
   forall (P Q : Prop), (P \/ Q) = (Q \/ P).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros PE P Q. apply PE.
+  split.
+  - intros H. apply or_commut. apply H.
+  - intros H. apply or_commut. apply H.
+Qed.
 (** [] *)
 
 (** **** Exercise: 1 star, advanced (pe_implies_true_eq)
@@ -895,7 +953,12 @@ Proof.
 Lemma pe_implies_true_eq :
   propositional_extensionality ->
   forall (P : Prop), P -> True = P.
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  intros PE P H. apply PE.
+  split.
+  - intros _. apply H.
+  - intros _. apply I.
+Qed.  
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced (pe_implies_pi)
@@ -918,7 +981,11 @@ Definition proof_irrelevance : Prop :=
 
 Theorem pe_implies_pi :
   propositional_extensionality -> proof_irrelevance.
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  intros PE P pf1 pf2.
+  destruct (pe_implies_true_eq PE P pf1).
+  destruct pf1. destruct pf2. reflexivity.
+Qed.
 (** [] *)
 
 (* 2022-08-08 17:13 *)
