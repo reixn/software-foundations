@@ -71,7 +71,10 @@ Proof.
 Theorem plus_one_r' : forall n:nat,
   n + 1 = S n.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  apply nat_ind.
+  - reflexivity.
+  - simpl. intros n' IHn'. f_equal. apply IHn'.
+Qed.
 (** [] *)
 
 (** Coq generates induction principles for every datatype
@@ -189,14 +192,13 @@ Inductive booltree : Type :=
 
 Definition booltree_property_type : Type := booltree -> Prop.
 
-Definition base_case (P : booltree_property_type) : Prop
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition base_case (P : booltree_property_type) : Prop := P bt_empty.
 
 Definition leaf_case (P : booltree_property_type) : Prop
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+  := forall b, P (bt_leaf b).
 
 Definition branch_case (P : booltree_property_type) : Prop
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+  := forall b t1, P t1 -> forall t2, P t2 -> P (bt_branch b t1 t2).
 
 Definition booltree_ind_type :=
   forall (P : booltree_property_type),
@@ -212,7 +214,7 @@ Definition booltree_ind_type :=
     same type as what you just defined. *)
 
 Theorem booltree_ind_type_correct : booltree_ind_type.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. exact booltree_ind. Qed.
 
 (** [] *)
 
@@ -229,7 +231,8 @@ Proof. (* FILL IN HERE *) Admitted.
     principle Coq generates is that given above: *)
 
 Inductive Toy : Type :=
-  (* FILL IN HERE *)
+  | con1 (b : bool)
+  | con2 (n : nat) (t : Toy)
 .
 
 (** Show that your definition is correct by proving the following theorem.
@@ -243,7 +246,9 @@ Theorem Toy_correct : exists f g,
     (forall b : bool, P (f b)) ->
     (forall (n : nat) (t : Toy), P t -> P (g n t)) ->
     forall t : Toy, P t.
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  exists con1. exists con2. exact Toy_ind.
+Qed.
 
 (** [] *)
 
@@ -303,6 +308,10 @@ Check tree_ind.
                forall n : nat, P (constr3 X m n)) ->
             forall m : mytype X, P m
 *) 
+Inductive mytype (X : Type) : Type :=
+  | constr1 (x : X)
+  | constr2 (n : nat)
+  | constr3 (m : mytype X) (n : nat).
 (** [] *)
 
 (** **** Exercise: 1 star, standard, optional (foo)
@@ -318,6 +327,10 @@ Check tree_ind.
                (forall n : nat, P (f1 n)) -> P (quux X Y f1)) ->
              forall f2 : foo X Y, P f2
 *) 
+Inductive foo (X Y : Type) : Type :=
+  | bar (x : X)
+  | baz (y : Y)
+  | quux (f1 : nat -> foo X Y).
 (** [] *)
 
 (** **** Exercise: 1 star, standard, optional (foo')
@@ -334,10 +347,10 @@ Inductive foo' (X:Type) : Type :=
      foo'_ind :
         forall (X : Type) (P : foo' X -> Prop),
               (forall (l : list X) (f : foo' X),
-                    _______________________ ->
-                    _______________________   ) ->
-             ___________________________________________ ->
-             forall f : foo' X, ________________________
+                    P f ->
+                    P (C1 X l f)   ) ->
+             P (C2 X) ->
+             forall f : foo' X, P f
 *)
 
 (** [] *)
@@ -942,13 +955,21 @@ Proof.
     [match] as part of the definition. *)
 
 Definition better_t_tree_ind_type : Prop
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+  := forall (X : Type) (P : t_tree X -> Prop),
+    P t_leaf ->
+    (forall tl tr v, P tl -> P tr -> P (t_branch (tl, v, tr ))) ->
+    forall t, P t.
 
 (** Second, define the induction principle by giving a term of that
     type. Use the examples about [nat], above, as models. *)
 
 Definition better_t_tree_ind : better_t_tree_ind_type
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+  := fun X p Hl IH =>
+    fix f (t : t_tree X) :=
+      match t with
+      | t_leaf => Hl
+      | t_branch (l, v, r) => IH l r v (f l) (f r)
+      end.
 
 (** Finally, prove the theorem. If [induction...using] gives you an
     error about "Cannot recognize an induction scheme", don't worry
@@ -959,7 +980,13 @@ Definition better_t_tree_ind : better_t_tree_ind_type
 
 Theorem reflect_involution : forall (X : Type) (t : t_tree X),
     reflect (reflect t) = t.
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  intros X.
+  apply better_t_tree_ind.
+  - reflexivity.
+  - intros tl tr v Hl Hr. simpl.
+    rewrite Hl. rewrite Hr. reflexivity.
+Qed.
 
 (** [] *)
 
