@@ -207,16 +207,19 @@ Proof. reflexivity. Qed.
    [X] (inclusive: [1 + 2 + ... + X]) in the variable [Y].  Make sure
    your solution satisfies the test that follows. *)
 
-Definition pup_to_n : com
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition pup_to_n : com :=
+  <{
+    Y := 0;
+    while X > 0 do
+      Y := Y + X;
+      X := X - 1
+    end
+  }>.
 
 Example pup_to_n_1 :
   test_ceval (X !-> 5) pup_to_n
   = Some (0, 15, 0).
-(* FILL IN HERE *) Admitted.
-(* 
 Proof. reflexivity. Qed.
-*)
 (** [] *)
 
 (** **** Exercise: 2 stars, standard, optional (peven)
@@ -225,9 +228,24 @@ Proof. reflexivity. Qed.
     sets [Z] to [1] otherwise.  Use [test_ceval] to test your
     program. *)
 
-(* FILL IN HERE
+Definition peven : com := 
+  <{
+    Z := X;
+    while Z > 1 do
+      Z := Z - 2
+    end
+  }>.
 
-    [] *)
+Example peven_4 :
+  test_ceval (X !-> 4) peven
+  = Some (4, 0, 0).
+Proof. reflexivity. Qed.
+
+Example peven_3 :
+  test_ceval (X !-> 3) peven
+  = Some (3, 0, 1).
+Proof. reflexivity. Qed.
+(**  [] *)
 
 (* ################################################################# *)
 (** * Relational vs. Step-Indexed Evaluation *)
@@ -359,8 +377,41 @@ Theorem ceval__ceval_step: forall c st st',
       exists i, ceval_step st c i = Some st'.
 Proof.
   intros c st st' Hce.
+  assert (Hmax : forall n m mx, mx = max n m -> n <= mx /\ m <= mx).
+    { intros n m mx E.
+      rewrite <- max_lub_iff with (p := mx).
+      rewrite E. apply le_n. }
+  assert (Hstep : forall i mx, 
+    i <= mx ->
+    forall st1 c st2, ceval_step st1 c i = Some st2 ->
+    ceval_step st1 c mx = Some st2).
+    { intros i mx Hl st1 com st2 H1.
+      apply ceval_step_more with (i1 := i). apply Hl. apply H1. }
   induction Hce.
-  (* FILL IN HERE *) Admitted.
+  - exists 1. reflexivity.
+  - exists 1. simpl. rewrite H. reflexivity.
+  - destruct IHHce1 as [i1 E1]. destruct IHHce2 as [i2 E2].
+    remember (max i1 i2) as mi.
+    destruct (Hmax i1 i2 mi Heqmi) as [Hl1 Hl2].
+    exists (1 + mi). simpl.
+    apply (Hstep _ _ Hl1) in E1. rewrite E1.
+    apply (Hstep _ _ Hl2) in E2. rewrite E2.
+    reflexivity.
+  - destruct IHHce as [i E].
+    exists (1 + i). simpl.
+    rewrite H. apply E.
+  - destruct IHHce as [i E].
+    exists (1 + i). simpl.
+    rewrite H. apply E.
+  - exists 1. simpl. rewrite H. reflexivity.
+  - destruct IHHce1 as [i1 E1]. destruct IHHce2 as [i2 E2].
+    remember (max i1 i2) as mi.
+    destruct (Hmax i1 i2 mi Heqmi) as [Hl1 Hl2].
+    exists (1 + mi). simpl. rewrite H.
+    apply (Hstep _ _ Hl1) in E1. rewrite E1.
+    apply (Hstep _ _ Hl2) in E2. rewrite E2.
+    reflexivity.
+Qed.
 (** [] *)
 
 Theorem ceval_and_ceval_step_coincide: forall c st st',
