@@ -517,7 +517,7 @@ Notation "t1 ; t2" := (tseq t1 t2) (in custom stlc at level 3).
 
 would it behave the same? *)
 
-(* FILL IN HERE *)
+(* No *)
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_compact_update : option (nat*string) := None.
@@ -1051,7 +1051,24 @@ Theorem cyclic_store:
     t / nil -->*
     <{ unit }> / (<{ \x:Nat, (!(loc 1)) x }> :: <{ \x:Nat, (!(loc 0)) x }> :: nil).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  remember ("r0"%string) as r0.
+  remember ("r1"%string) as r1.
+  exists <{
+    (\r0:Ref (Nat -> Nat), 
+      (\r1:Ref (Nat -> Nat),
+        (r0 := \x:Nat,(!r1) x) ;
+        (r1 := \x:Nat, (!r0) x)) 
+      (ref (\x:Nat,1)))
+      (ref (\x:Nat,0))}>.
+  subst r0. subst r1.
+  Ltac go H := eapply multi_step;[apply H; auto|]; simpl.
+  go ST_App2. go ST_AppAbs. go ST_App2. go ST_AppAbs.
+  go ST_App2.
+    { apply ST_Assign;simpl; auto. }
+  go ST_AppAbs.
+  go ST_Assign.
+  apply multi_refl.
+Qed.
 (** [] *)
 
 (** These problems arise from the fact that our proposed
@@ -1272,7 +1289,17 @@ Theorem store_not_unique:
     store_well_typed ST2 st /\
     ST1 <> ST2.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  exists (<{ \x:Nat, (!(loc 1)) x }> :: <{ \x:Nat, (!(loc 0)) x }> :: nil).
+  exists (<{ Nat -> Nat }> :: <{ Nat -> Nat }> :: nil).
+  exists (<{ Nat -> Unit }> :: <{ Nat -> Unit }> :: nil).
+  unfold store_well_typed. simpl.
+  unfold store_lookup. unfold store_Tlookup.
+  repeat split; [| | discriminate];
+    intros l Hl;
+    (destruct l; [| destruct l; [| lia]];
+      apply T_Abs; apply T_App with <{ Nat }>; auto;
+      apply T_Deref; apply T_Loc; simpl; auto).
+Qed. 
 (** [] *)
 
 (** We can now state something closer to the desired preservation
@@ -1906,24 +1933,36 @@ Qed.
     sure it gives the correct result when applied to the argument
     [4].) *)
 
-Definition factorial : tm
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition factorial : tm  :=
+  <{ \y:Nat, (\r:Ref (Nat -> Nat), (r := \x:Nat, if0 x then 1 else x * ((!r) (pred x))); (!r) y) (ref (\x:Nat, 1)) }>.
 
 Lemma factorial_type : empty; nil |- factorial \in (Nat -> Nat).
 Proof with eauto.
-  (* FILL IN HERE *) Admitted.
+  unfold factorial.
+  apply T_Abs.
+  apply T_App with <{ Ref (Nat -> Nat) }>; auto.
+  apply T_Abs.
+  eapply T_App.
+  - apply T_Abs. eapply T_App.
+    + apply T_Deref. apply T_Var. reflexivity.
+    + apply T_Var. reflexivity.
+  - eapply T_Assign.
+    + apply T_Var. reflexivity.
+    + apply T_Abs. apply T_If0; auto.
+      apply T_Mult; auto.
+      eapply T_App; eauto.
+      apply T_Deref. apply T_Var. reflexivity.
+Qed.
 
 (** If your definition is correct, you should be able to just
     uncomment the example below; the proof should be fully
     automatic using the [reduce] tactic. *)
 
-(* 
 Lemma factorial_4 : exists st,
   <{ factorial 4 }> / nil -->* tm_const 24 / st.
 Proof.
   eexists. unfold factorial. reduce.
 Qed.
-*)
 (** [] *)
 
 (* ################################################################# *)
